@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-Training#2024}
+      - DB_NAME=${DB_NAME:-final_project}
+      - JWT_SECRET=${JWT_SECRET:-your_secret_key}
+    depends_on:
+      - db
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    command: >
+      sh -c "
+        /usr/local/bin/wait-for-it db:5432 --timeout=30 --strict -- echo 'Database is up' &&
+        if [ \"$$NODE_ENV\" = \"test\" ]; then
+          # Ensure _test is only appended once
+          if [ \"$$DB_NAME\" != *'_test' ]; then
+            export DB_NAME=\"$$DB_NAME\"_test
+          fi
+        fi &&
+        echo 'Using database: '$DB_NAME &&
+        echo 'Checking if database exists' &&
+        PGPASSWORD=$$DB_PASSWORD psql -h $$DB_HOST -U $$DB_USER -lqt | cut -d '|' -f 1 | grep -qw $$DB_NAME || {
+          echo 'Creating database' &&
+          npx sequelize-cli db:create;
+        } &&
+        if [ \"$$NODE_ENV\" = \"development\" ] || [ \"$$NODE_ENV\" = \"test\" ]; then
+          echo 'Running migrations' &&
+          npx sequelize-cli db:migrate &&
+          echo 'Seeding database' &&
+          npx sequelize-cli db:seed:all;
+        fi &&
+        if [ \"$$NODE_ENV\" = \"test\" ]; then
+          echo 'Running tests' &&
+          npm test;
+        else
+          echo 'Starting application' &&
+          npm start;
+        fi
+      "
+
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-Training#2024}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
