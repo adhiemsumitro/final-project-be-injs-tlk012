@@ -16,6 +16,6 @@ router.post('/:movieId', addBookmark);
 router.get('/', getBookmarks);
 
 // Route to delete a bookmark by ID
-router.delete('/:id', deleteBookmark);
+router.delete('/:movieId', deleteBookmark);
 
 module.exports = router;
