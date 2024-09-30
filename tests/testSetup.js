@@ -47,22 +47,34 @@ function generateUniqueUsername() {
 }
 
 async function createTestUserInDB() {
-  const username = generateUniqueUsername();
-  const password = 'password123';
-  const hashedPassword = await bcrypt.hash(password, 10);
-  
-  const user = await User.create({
-    name: 'Test User',
-    username: username,
-    email: `${username}@example.com`,
-    password: hashedPassword,
-    role: 'admin',
-    phoneNumber: '081319023264',
-    address: 'Test Address',
-  });
+  try {
+    const username = generateUniqueUsername();
+    const existingUser = await User.findOne({ where: { username } });
+    if (existingUser) {
+      console.log('User already exists, generating new username');
+      return createTestUserInDB(); // Recursively try again
+    }
 
-  console.log('Created test user:', user.toJSON());
-  return { user, password };
+    const password = 'password123';
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const user = await User.create({
+      name: 'Test User',
+      username: username,
+      email: `${username}@example.com`,
+      password: hashedPassword,
+      role: 'admin',
+      phoneNumber: '081319023264',
+      address: 'Test Address',
+    });
+
+    console.log('Created test user:', user.toJSON());
+    return { user, password };
+
+  } catch (error) {
+    console.error('Error creating test user:', error);
+    throw error;
+  }
 }
 
 async function authenticateUserViaAPI() {
@@ -112,9 +124,6 @@ afterAll(async () => {
     throw error;
   }
 });
-
-// Remove the beforeEach hook that clears the database
-// This is now handled in individual test files
 
 module.exports = {
   getServerPort: () => server.address().port,

@@ -4,7 +4,7 @@ const { User } = require('../models');
 
 describe('Authentication Endpoints', () => {
   beforeEach(async () => {
-    await clearDatabase();
+    await clearDatabase(false); // Clear everything, including users
   });
 
   const registerUserViaAPI = async (userData) => {
